@@ -1,5 +1,6 @@
 # tokens
 secrets/
+local_models/
 
 # datasets
 notebooks/jonah/data
