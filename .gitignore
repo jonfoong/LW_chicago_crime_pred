@@ -1,6 +1,9 @@
 # tokens
 secrets/
 
+# datasets
+notebooks/jonah/data
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
