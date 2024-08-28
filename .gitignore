@@ -1,5 +1,6 @@
 # tokens
 secrets/
+local_models/
 
 
 # Byte-compiled / optimized / DLL files
