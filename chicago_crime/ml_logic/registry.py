@@ -12,7 +12,7 @@ import tempfile
 def load_model():
 
     # load from GCS
-    client = storage.Client()
+    client = storage.Client(credentials='secrets/gcp_token.json')
     blobs = client.get_bucket("lw_chicago_crime_pred").list_blobs(prefix="dummy")
     latest_blob = max(blobs)
 
