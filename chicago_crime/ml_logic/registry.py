@@ -2,13 +2,9 @@ from google.cloud import storage
 import pickle
 from statsmodels.tsa.arima.model import ARIMAResults
 import tempfile
-
-# save results
-
-# save model
+from chicago_crime.params import *
 
 # load model
-
 def load_model():
 
     # load from GCS
