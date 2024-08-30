@@ -11,6 +11,7 @@ from google.oauth2 import service_account
 import geopandas as gpd
 from shapely.geometry import Point
 import os
+from chicago_crime.params import *
 
 
 
@@ -46,14 +47,16 @@ def add_missing_communities(project_id: str,
 
     update_job = client.query(query_data_to_temp)
     update_job.result()
+    print(f"🍀 Transferred raw data into intermediate table")
 
     # Load raw data from BQ
-    query_missing_communities = """
+    query_missing_communities = f"""
         SELECT Date, CAST(Latitude AS FLOAT64) as Latitude, CAST(Longitude AS FLOAT64) as Longitude, ID
         FROM `wagon-bootcamp-428814.chicago_crime.chicago_crime_tab`
         WHERE `Community Area` IS NULL
-        LIMIT 1000
+        {QUERY_NROWS}
         """
+
     df_spatial = read_gbq(query_missing_communities, credentials = credentials)
     print(f"✅ Loaded {df_spatial.shape[0]} missing communities to Dataframe")
 
@@ -116,8 +119,8 @@ def add_missing_communities(project_id: str,
 def clean_data_frame(df: pd.DataFrame) -> pd.DataFrame :
 
     #sets the columns to the right data type
-    df['Date_day'] = pd.to_datetime(df['Date_day'])
-    df['Community Area'] = pd.to_numeric(df['Community Area'])
+    df['Date_day'] = pd.to_datetime(df['Date_day']).dt.date
+    #df['Community Area'] = pd.to_numeric(df['Community Area'])
 
     #creates a range of dates for the full data frame
     full_date_range = pd.date_range(start=df['Date_day'].min(), end=df['Date_day'].max(), freq='D')
@@ -125,6 +128,8 @@ def clean_data_frame(df: pd.DataFrame) -> pd.DataFrame :
     #Creates a new data frame with the missing dates
     community_areas = df['Community Area'].unique()
     complete_df = pd.MultiIndex.from_product([full_date_range, community_areas], names=['Date_day', 'Community Area']).to_frame(index=False)
+    complete_df['Date_day'] = pd.to_datetime(complete_df['Date_day']).dt.date
+
 
     #merges the old data frame with the new one
     merged_df = pd.merge(complete_df, df, on=['Date_day', 'Community Area'], how='left')
@@ -134,7 +139,7 @@ def clean_data_frame(df: pd.DataFrame) -> pd.DataFrame :
     #sets the date as the index of the dt
     merged_df.set_index('Date_day', inplace=True)
 
-    #final step to drop the lines where we dont have values if Valentina cant find the solution.
+    #final step to drop the lines where we dont have values
     merged_df = merged_df.dropna(subset=['Community Area'])
 
     print(f"✅ Data cleaned")

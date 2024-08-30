@@ -1,10 +1,9 @@
 from chicago_crime.params import *
 from chicago_crime.ml_logic.extract import load_raw_data
 from chicago_crime.ml_logic.transform import add_missing_communities, clean_data_frame
+from chicago_crime.ml_logic.load import upload_dt_to_bigquery
 from google.oauth2 import service_account
 
-
-# TODO: delete LIMIT!!!!! we currently quering small amounts of data
 
 # Load Credentials
 credentials = service_account.Credentials.from_service_account_file(GOOGLE_APPLICATION_CREDENTIALS)
@@ -23,7 +22,7 @@ def preprocess_data() -> None:
     print(df.head(10))
 
     postproc_df = clean_data_frame(df)
-    print(postproc_df.head(10))
+    upload_dt_to_bigquery(postproc_df)
 
     print("✅ preprocess_data() done !!!\n")
 

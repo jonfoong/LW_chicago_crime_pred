@@ -24,7 +24,7 @@ def load_raw_data(
         Date_day, `Community Area`
     ORDER BY
         Date_day, `Community Area`
-    LIMIT 1000
+    {QUERY_NROWS}
     """
 
     df = pd.read_gbq(query_load_raw_data, credentials = credentials, dialect='standard')
