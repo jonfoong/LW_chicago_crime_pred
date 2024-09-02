@@ -1,6 +1,7 @@
 import mlflow
 from mlflow import MlflowClient
 import mlflow.tensorflow
+from chicago_crime.params import *
 
 # save results
 
@@ -16,28 +17,28 @@ def save_model(model,
     # get previous runs and compare performance
     runs = client.search_runs(experiment_ids=[DATABRICKS_EXP_ID])
 
-    # set default stage to staging
-    stage = "staging"
-
     # check if previous runs do better
-    for run in runs:
-        run_id = run.info.run_id
-        run_metric = run.data.metrics.get("accuracy", None)
-        if metric < run_metric:
-            # if old model is worse, move to staging and current to production
-            client.set_tag(run_id, "stage", "staging")
-            stage = "production" 
+    if len(runs) > 0:
+        for run in runs:
+            run_id = run.info.run_id
+            run_metric = run.data.metrics.get("mae", None)
+            if metric < run_metric:
+                # if old model is worse, move to staging and current to production
+                client.set_tag(run_id, "stage", "staging")
+                stage = "production" 
+            else:
+                stage = "staging"
 
     # Start an MLflow run to log parameters and save model to mlflow
     with mlflow.start_run():
         # Log parameters, metrics, and the model itself
-        mlflow.log_param("n_estimators", 100)
+        mlflow.log_params({"sequence_length": 7})
         mlflow.log_metric("mae", metric)
         mlflow.tensorflow.log_model(model, "tensorflow_model")
         mlflow.set_tag("stage", stage)
         mlflow.end_run()
 
-        print(f"Model trained and logged with mae: {metric:.4f}")
+        print(f"Model trained and logged with mae: {metric:.4f} and stage: {stage}")
 
 
 # load model

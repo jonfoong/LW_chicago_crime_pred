@@ -5,26 +5,10 @@ reinstall_package:
 	@pip install -e .pip install ipdb
 
 
-
-
-
-################### DATA SOURCES ACTIONS ################
-
-# Data sources: targets for monthly data imports
-
-
-
-
-
-##################### CLEANING #####################
-
-clean:
-	@rm -f */version.txt
-	@rm -f .coverage
-	@rm -fr **/__pycache__ **/*.pyc
-	@rm -fr **/build **/dist
-	@rm -fr proj-*.dist-info
-	@rm -fr proj.egg-info
-	@rm -f **/.DS_Store
-	@rm -f **/*Zone.Identifier
-	@rm -f **/.ipynb_checkpoints
+train_cloud:
+	@echo "Starting compute instance..."
+	@gcloud compute instances start chicago-crimes-cpu --zone=europe-west1-c
+	@echo "Copyying files to vm..."
+	@scp -r -i ~/.ssh/gcp-chicago-crimes chicago_crime/* jonah@34.22.230.224:~/chicago_crime/
+	@echo "Starting training process on cloud VM..."
+	@ssh -i ~/.ssh/gcp-chicago-crimes jonah@34.22.230.224 'export PYTHONPATH=/home/jonah && python ~/chicago_crime/interface/main.py && sudo shutdown now'

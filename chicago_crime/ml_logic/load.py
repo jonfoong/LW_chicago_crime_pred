@@ -1,28 +1,36 @@
 # upload transformed data to GBQ
-
 from chicago_crime.params import *
 import pandas as pd
-from pandas_gbq import to_gbq
-from google.oauth2 import service_account
 from google.cloud import bigquery
 
 def upload_dt_to_bigquery(
-        data: pd.DataFrame
+        df: pd.DataFrame
     ) -> None:
     """
     - Save the DataFrame to BigQuery
     - Empty the table beforehand (WRITE_TRUNCATE)
     """
 
+    client = bigquery.Client()
+
     # Define write mode
-    write_mode = "WRITE_TRUNCATE"
-    job_config = bigquery.LoadJobConfig(write_disposition=write_mode)
+    write_mode = "WRITE_TRUNCATE" 
 
-    table_schema = [{'name': 'Date_day', 'type': 'DATE'},
-                    {'name': 'Community Area', 'type': 'STRING'},
-                    {'name': 'crime_count', 'type': 'INTEGER'}]
+    job_config = bigquery.LoadJobConfig(
+        write_disposition=write_mode,
+        schema=[
+            bigquery.SchemaField("Date_day", "DATE"),
+            bigquery.SchemaField("community_area", "STRING"),
+            bigquery.SchemaField("crime_count", "INTEGER"),
+        ]
+    )
 
-    data.to_gbq('wagon-bootcamp-428814.chicago_crime.post_proc', project_id = GCP_PROJECT,
-                if_exists = 'replace', table_schema = table_schema)
+    load_job = client.load_table_from_dataframe(
+        df,  # This is the pandas DataFrame you want to load
+        f'{GCP_PROJECT}.{BQ_DATASET}.post_proc',
+        job_config=job_config
+        )
+    
+    load_job.result()
 
-    print(f"✅ Data saved to BQ successfully, N of rows: {data.shape[0]}")
+    print(f"✅ Data saved to BQ successfully, N of rows: {df.shape[0]}")

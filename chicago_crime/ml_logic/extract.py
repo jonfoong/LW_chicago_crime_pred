@@ -1,15 +1,10 @@
 # get raw data
 import pandas as pd
-from colorama import Fore, Style # type: ignore
 from google.cloud import bigquery
 from chicago_crime.params import *
-from pathlib import Path
-from google.oauth2 import service_account
 
 
-def load_raw_data(
-        credentials: service_account.Credentials
-    ) -> pd.DataFrame:
+def load_raw_data() -> pd.DataFrame:
 
     # TODO: do we need exception handling? eg check whether query contains proj_id etc
 
@@ -24,10 +19,31 @@ def load_raw_data(
         Date_day, `Community Area`
     ORDER BY
         Date_day, `Community Area`
-    {QUERY_NROWS}
     """
 
-    df = pd.read_gbq(query_load_raw_data, credentials = credentials, dialect='standard')
+    client = bigquery.Client()
+    query_out = client.query(query_load_raw_data)
+    query_out.result()
+
+    df = query_out.to_dataframe()
     print(f"✅ Loaded {df.shape[0]} rows from GCloud.chicago_crime_temp\n")
+
+    return df
+
+def load_postproc_data() -> pd.DataFrame:
+
+    query_postproc_data = f"""
+    SELECT *
+    FROM `{GCP_PROJECT}.{BQ_DATASET}.post_proc`
+    """
+
+    # query and wait
+    client = bigquery.Client()
+    query_out = client.query(query_postproc_data)
+    query_out.result()
+
+    # convert to df
+    df = query_out.to_dataframe()
+    print(f"✅ Loaded {df.shape[0]} rows from GCloud.post_proc\n")
 
     return df
