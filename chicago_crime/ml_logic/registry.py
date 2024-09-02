@@ -17,9 +17,6 @@ def save_model(model,
     # get previous runs and compare performance
     runs = client.search_runs(experiment_ids=[DATABRICKS_EXP_ID])
 
-    # set default stage to staging
-    stage = "staging"
-
     # check if previous runs do better
     if len(runs) > 0:
         for run in runs:
@@ -29,6 +26,8 @@ def save_model(model,
                 # if old model is worse, move to staging and current to production
                 client.set_tag(run_id, "stage", "staging")
                 stage = "production" 
+            else:
+                stage = "staging"
 
     # Start an MLflow run to log parameters and save model to mlflow
     with mlflow.start_run():
