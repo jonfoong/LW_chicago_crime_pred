@@ -3,7 +3,7 @@ from chicago_crime.ml_logic.extract import load_raw_data, load_postproc_data
 from chicago_crime.ml_logic.transform import add_missing_communities, clean_data_frame
 from chicago_crime.ml_logic.load import upload_dt_to_bigquery
 from chicago_crime.ml_logic.model import initialize_model, train_model, compile_model
-from chicago_crime.ml_logic.registry import save_model
+from chicago_crime.ml_logic.registry import save_model, load_model
 
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
@@ -77,9 +77,11 @@ def train():
 # TODO: predict on new data
 
 def predict():
-    pass
+
+    model = load_model()
+    return model.predict()
 
 if __name__ == '__main__':
-    preprocess_data()
+    #preprocess_data()
     train()
-    predict()
+    #predict()

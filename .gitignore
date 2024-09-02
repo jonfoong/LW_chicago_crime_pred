@@ -1,6 +1,7 @@
 # tokens
 secrets/
 local_models/
+.ssh/
 
 
 # Byte-compiled / optimized / DLL files
