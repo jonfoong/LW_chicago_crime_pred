@@ -8,7 +8,9 @@ from chicago_crime.params import *
 # save model
 
 def save_model(model,
-               metric):
+               test_metric,
+               base_metric,
+               sequence_length):
     # Set the tracking URI to Databricks
     mlflow.set_tracking_uri(DATABRICKS_EXP_URI)
     mlflow.set_experiment(DATABRICKS_EXP_PATH)
@@ -21,24 +23,27 @@ def save_model(model,
     if len(runs) > 0:
         for run in runs:
             run_id = run.info.run_id
-            run_metric = run.data.metrics.get("mae", None)
-            if metric < run_metric:
+            run_metric = run.data.metrics.get("test mae", None)
+            if test_metric < run_metric:
                 # if old model is worse, move to staging and current to production
                 client.set_tag(run_id, "stage", "staging")
-                stage = "production" 
+                stage = "production"
             else:
                 stage = "staging"
+    else:
+        stage = "production" # default production if no models exist
 
     # Start an MLflow run to log parameters and save model to mlflow
     with mlflow.start_run():
         # Log parameters, metrics, and the model itself
-        mlflow.log_params({"sequence_length": 7})
-        mlflow.log_metric("mae", metric)
+        mlflow.log_params({"sequence_length": sequence_length})
+        mlflow.log_metric("test mae", test_metric)
+        mlflow.log_metric("base mae", base_metric)
         mlflow.tensorflow.log_model(model, "tensorflow_model")
         mlflow.set_tag("stage", stage)
         mlflow.end_run()
 
-        print(f"Model trained and logged with mae: {metric:.4f} and stage: {stage}")
+        print(f"Model trained and logged with test mae: {test_metric:.4f} and stage: {stage}")
 
 
 # load model
@@ -58,17 +63,17 @@ def load_model():
     #     # Load the model from the temporary file
     #     with open(temp_file.name, 'rb') as file:
     #         model = pickle.load(file)
-    
+
     mlflow_runs = client.search_runs(
         experiment_ids=[DATABRICKS_EXP_ID],
         filter_string="tags.stage = 'production'"
         )
-    
+
     production_run = mlflow_runs[0]
     run_id = production_run.info.run_id
 
     # Load the model from the selected run
-    model_uri = f"runs:/{run_id}/tensorflow_model"  
+    model_uri = f"runs:/{run_id}/tensorflow_model"
     model = mlflow.tensorflow.load_model(model_uri)
 
     return model

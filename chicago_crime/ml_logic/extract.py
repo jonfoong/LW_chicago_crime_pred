@@ -35,6 +35,7 @@ def load_postproc_data() -> pd.DataFrame:
     query_postproc_data = f"""
     SELECT *
     FROM `{GCP_PROJECT}.{BQ_DATASET}.post_proc`
+    WHERE community_area !='0'
     """
 
     # query and wait
