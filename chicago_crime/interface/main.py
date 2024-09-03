@@ -1,13 +1,11 @@
 from chicago_crime.params import *
-from chicago_crime.ml_logic.extract import load_raw_data, load_postproc_data, load_training_data, load_minmax_train
+from chicago_crime.ml_logic.extract import load_raw_data, load_postproc_data
 from chicago_crime.ml_logic.transform import add_missing_communities, clean_data_frame
 from chicago_crime.ml_logic.load import upload_dt_to_bigquery
 from chicago_crime.ml_logic.model import initialize_model, train_model, compile_model, data_split, get_metrics
-from chicago_crime.ml_logic.registry import save_model, load_model
+from chicago_crime.ml_logic.registry import save_model
 import time
 import pandas as pd
-import numpy as np
-
 
 def preprocess_data() -> None:
 
@@ -62,55 +60,8 @@ def train():
 
 # TODO: predict on new data
 
-def predict():
 
-    model, sequence_length_model, train_max_date = load_model()
-
-    # load data the model was trained on
-    df = load_training_data(train_max_date, sequence_length_model)
-    df = df.pivot(index='Date_day', columns='community_area', values='crime_count')
-
-    # load min and max data
-    df_minmax = load_minmax_train()
-    df_pivot = df.pivot(index='date', columns='community_area', values='crime_count')
-
-    # pivot the data from long to wide
-
-    old_length=len(df)
-
-    t=df.Date_day[-1]
-
-    while t < date:
-        # 1. turn data into format to feed model:
-        X_list = []
-        areas = np.sort([int(i) for i in df.community_area.unique()])
-        for area in areas:
-            df_com = df.query(f"community_area=='{str(area)}'")
-            # turn crimes into list
-            crime_count_list = list(df_com["crime_count"])
-            # create sequences
-            sequence_length = 365
-            X= np.array( crime_count_list[-365:] )
-            # scaling:
-            mini=df_minmax.loc[str(area),"min_crime_count"]
-            maxi=df_minmax.loc[str(area),"max_crime_count"]
-            X= ( X - mini ) / maxi - mini
-            # append to list
-            X_list.append(X)
-        X_final=np.array(X_list).transpose().reshape(1,365,len(areas))
-        # 2. predicting next days crime count:
-        y=model.predict(X_final)
-        # 3. time + 1 and add new row to df
-        t = t + timedelta(days=1)
-        new_row=np.concatenate( np.array(t), y.reshape(1,-1), axis=1  )
-        new_row=new_row.flatten()
-        df.loc[len(df)]= new_row
-    pred_days=len(df) - old_length
-    return df[- pred_days:]
-
-    return model.predict()
 
 if __name__ == '__main__':
     #preprocess_data()
     train()
-    #predict()
