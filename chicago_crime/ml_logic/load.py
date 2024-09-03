@@ -14,7 +14,7 @@ def upload_dt_to_bigquery(
     client = bigquery.Client()
 
     # Define write mode
-    write_mode = "WRITE_TRUNCATE" 
+    write_mode = "WRITE_TRUNCATE"
 
     job_config = bigquery.LoadJobConfig(
         write_disposition=write_mode,
@@ -30,7 +30,7 @@ def upload_dt_to_bigquery(
         f'{GCP_PROJECT}.{BQ_DATASET}.post_proc',
         job_config=job_config
         )
-    
+
     load_job.result()
 
     print(f"✅ Data saved to BQ successfully, N of rows: {df.shape[0]}")

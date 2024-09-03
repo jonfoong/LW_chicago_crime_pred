@@ -26,7 +26,8 @@ def add_missing_communities() -> None:
     query_truncate_vs = f"""
     TRUNCATE TABLE `{GCP_PROJECT}.{BQ_DATASET}.chicago_crime_temp`;
     """
-    client.query_and_wait(query_truncate_vs)
+    query_out = client.query(query_truncate_vs)
+    query_out.result()
 
     # Copy raw data to temporary tab from main chicago tab
     query_data_to_temp = f"""
@@ -34,7 +35,8 @@ def add_missing_communities() -> None:
     SELECT * FROM `{GCP_PROJECT}.{BQ_DATASET}.chicago_crime_tab`
     """
 
-    client.query_and_wait(query_data_to_temp)
+    query_out = client.query(query_data_to_temp)
+    query_out.result()
     print(f"🍀 Transferred raw data into intermediate table")
 
     # Load raw data from BQ
@@ -44,7 +46,9 @@ def add_missing_communities() -> None:
         WHERE `Community Area` IS NULL
         """
 
-    df_spatial = client.query_and_wait(query_missing_communities).to_dataframe()
+    query_out = client.query(query_missing_communities)
+    query_out.result()
+    df_spatial = query_out.to_dataframe()
     print(f"✅ Loaded {df_spatial.shape[0]} missing communities to Dataframe")
 
     # Load the geoJSON file
@@ -91,13 +95,15 @@ def add_missing_communities() -> None:
     FROM `{GCP_PROJECT}.{BQ_DATASET}.communities_temp` AS temp
     WHERE temp.ID = destination.ID
     """
-    client.query_and_wait(update_query)
+    query_out = client.query(update_query)
+    query_out.result()
 
     ### Delete temp table for intermediate communities storage
     query_drop_temp = f"""
     DROP TABLE `{GCP_PROJECT}.{BQ_DATASET}.communities_temp`
     """
-    client.query_and_wait(query_drop_temp)
+    query_out = client.query(query_drop_temp)
+    query_out.result()
     print(f"✅ Missing communities added successfully")
 
 
