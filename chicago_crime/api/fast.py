@@ -12,6 +12,7 @@ from chicago_crime.ml_logic.registry import load_model
 
 
 app = FastAPI()
+app.state.model, app.state.sequence_length_model, app.state.train_max_date = load_model()
 
 # Allowing all middleware is optional, but good practice for dev purposes
 app.add_middleware(
@@ -26,10 +27,8 @@ app.add_middleware(
 @app.get("/predict")
 def predict(date = "2024-08-15"):
 
-    model, sequence_length_model, train_max_date = load_model()
-
     # load data the model was trained on
-    df = load_training_data(train_max_date, sequence_length_model)
+    df = load_training_data(app.state.train_max_date, app.state.sequence_length_model)
     df = df.pivot(index='Date_day', columns='community_area', values='crime_count')
 
     # load min and max data
@@ -51,7 +50,7 @@ def predict(date = "2024-08-15"):
             # turn crimes into list
             crime_count_list = list(df_com)
             # create sequences
-            X= np.array(crime_count_list[-int(sequence_length_model):])
+            X= np.array(crime_count_list[-int(app.state.sequence_length_model):])
             # scaling:
             mini=df_minmax.iloc[area-1, :].min_crime_count
             maxi=df_minmax.iloc[area-1, :].max_crime_count
@@ -61,7 +60,7 @@ def predict(date = "2024-08-15"):
 
         X_final = np.array(X_list).transpose().reshape(1, 365, len(areas))
         # 2. predicting next days crime count:
-        y = model.predict(X_final)
+        y = app.state.model.predict(X_final)
         # 3. time + 1 and add new row to df
         t = t + timedelta(days = 1)
         df.loc[t] = y.flatten()
