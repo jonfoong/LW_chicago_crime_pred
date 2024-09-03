@@ -1,58 +1,60 @@
-from datetime import date
+from datetime import date, timedelta
 from chicago_crime.ml_logic import *
+import numpy as np
+import pandas as pd
 
 
 """ NEED TO SCALER! """
 
 
 def get_forecast(date):
-    today = date.today()
     model=model.load_model()
     df = extract.load_postproc_data()
+    old_length=len(df)
 
-    t=today
-    forecast_list=[]
+    t=df.Date_day[-1]
 
     while t < date:
-        1. create sequence of crime counts
-        [ crime_count(t-365), crime_count(t-364) , ... crime_count(t)  ]
-        2. for all community areas
-        3. stack them together : X
-         load model
-        4. y=model.predict(X)
-        5. crime_count(t+1)=y
-        6. forecast_list.append(y)
-        7. t= t+1
+
+        # 1. turn data into format to feed model:
+
+        # X_list = []
+        X_scaled_list = []
 
 
-        X.shape needs to be (1,365,77)
-    return forecast_list
+        areas = np.sort([int(i) for i in df.community_area.unique()])
 
+        for area in areas:
 
+            df_com = df.query(f"community_area=='{str(area)}'")
 
-    # X_list = []
-    X_scaled_list = []
+            # turn crimes into list
+            crime_count_list = list(df_com["crime_count"])
 
+            # create sequences
+            sequence_length = 365
+            X= np.array( crime_count_list[-365:] )
 
-    areas = np.sort([int(i) for i in df.community_area.unique()])
+            #scaler? to get X_scaled
 
-    for area in areas:
+            # append to lists
 
-        df_com = df.query(f"community_area=='{str(area)}'")
+            X_scaled_list.append(X)
 
-        # turn crimes into list
-        crime_count_list = list(df_com["crime_count"])
+        X_final=np.array(X_scaled_list).transpose().reshape(1,365,len(areas))
 
-        # create sequences
-        sequence_length = 365
-        X= np.array( [-365:] )
+        # 2. loading model and predicting next days crime count:
 
-        #scaler? to get X_scaled
+        y=model.predict(X_final)
 
-        # append to lists
+        # 3.
+        t = t + timedelta(days=1)
+        new_row=np.concatenate( np.array(t), y.reshape(1,-1), axis=1  )
+        new_row=new_row.flatten()
+        df.loc[len(df)]= new_row
 
-        X_scaled_list.append(X_scaled)
+    pred_days=len(df) - old_length
 
+    return df[- pred_days:]
 
-    X_scaled = np.array(X_scaled_list).transpose(1, 2, 0)
 
