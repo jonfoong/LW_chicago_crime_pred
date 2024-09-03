@@ -11,7 +11,8 @@ def save_model(model,
                test_metric,
                base_metric,
                sequence_length,
-               train_time):
+               train_time,
+               train_max_date):
     # Set the tracking URI to Databricks
     mlflow.set_tracking_uri(DATABRICKS_EXP_URI)
     mlflow.set_experiment(DATABRICKS_EXP_PATH)
@@ -20,24 +21,32 @@ def save_model(model,
     # get previous runs and compare performance
     runs = client.search_runs(experiment_ids=[DATABRICKS_EXP_ID])
 
+    for run in runs:
+        run_id = run.info.run_id
+        run_metric = run.data.metrics.get("test mae", None)
+        print(run_metric)
+
     # check if previous runs do better
+    all_metrics = []
     if len(runs) > 0:
         for run in runs:
             run_id = run.info.run_id
             run_metric = run.data.metrics.get("test mae", None)
+            all_metrics.append(run_metric)
             if test_metric < run_metric:
                 # if old model is worse, move to staging and current to production
                 client.set_tag(run_id, "stage", "staging")
-                stage = "production"
-            else:
-                stage = "staging"
-    else:
-        stage = "production" # default production if no models exist
+
+        if all([test_metric<i for i in all_metrics]):
+            stage = "production"
+        else:
+            stage = "staging"
 
     # Start an MLflow run to log parameters and save model to mlflow
     with mlflow.start_run():
         # Log parameters, metrics, and the model itself
-        mlflow.log_params({"sequence_length": sequence_length})
+        mlflow.log_params({"sequence_length": sequence_length,
+                           "train_max_date": train_max_date})
         mlflow.log_metric("test mae", test_metric)
         mlflow.log_metric("base mae", base_metric)
         mlflow.log_metric("train time", train_time)
@@ -78,8 +87,11 @@ def load_model():
     production_run = mlflow_runs[0]
     run_id = production_run.info.run_id
 
+    sequence_length_model = production_run.data.params.get("sequence_length")
+    train_max_date = production_run.data.params.get("train_max_date")
+
     # Load the model from the selected run
     model_uri = f"runs:/{run_id}/tensorflow_model"
     model = mlflow.tensorflow.load_model(model_uri)
 
-    return model
+    return model, sequence_length_model, train_max_date

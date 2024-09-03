@@ -17,6 +17,7 @@ DATABRICKS_EXP_ID = os.environ.get("DATABRICKS_EXP_ID")
 DATABRICKS_EXP_URI = os.environ.get("DATABRICKS_EXP_URI")
 DATABRICKS_EXP_PATH = os.environ.get("DATABRICKS_EXP_PATH")
 DATABRICKS_HOST = os.environ.get("DATABRICKS_HOST")
+SEQUENCE_LENGTH = int(os.environ.get("SEQUENCE_LENGTH"))
 
 # Read the Databricks API token from the file
 with open('secrets/databricks_api.txt', 'r') as file:
