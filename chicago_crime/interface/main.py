@@ -6,6 +6,7 @@ from chicago_crime.ml_logic.model import initialize_model, train_model, compile_
 from chicago_crime.ml_logic.registry import save_model, load_model
 import time
 import pandas as pd
+import numpy as np
 
 
 def preprocess_data() -> None:
@@ -81,8 +82,7 @@ def predict():
 
     while t < date:
         # 1. turn data into format to feed model:
-        # X_list = []
-        X_scaled_list = []
+        X_list = []
         areas = np.sort([int(i) for i in df.community_area.unique()])
         for area in areas:
             df_com = df.query(f"community_area=='{str(area)}'")
@@ -91,13 +91,16 @@ def predict():
             # create sequences
             sequence_length = 365
             X= np.array( crime_count_list[-365:] )
-            #scaler? to get X_scaled
-            # append to lists
-            X_scaled_list.append(X)
-        X_final=np.array(X_scaled_list).transpose().reshape(1,365,len(areas))
-        # 2. loading model and predicting next days crime count:
+            # scaling:
+            mini=df_minmax.loc[str(area),"min_crime_count"]
+            maxi=df_minmax.loc[str(area),"max_crime_count"]
+            X= ( X - mini ) / maxi - mini
+            # append to list
+            X_list.append(X)
+        X_final=np.array(X_list).transpose().reshape(1,365,len(areas))
+        # 2. predicting next days crime count:
         y=model.predict(X_final)
-        # 3.
+        # 3. time + 1 and add new row to df
         t = t + timedelta(days=1)
         new_row=np.concatenate( np.array(t), y.reshape(1,-1), axis=1  )
         new_row=new_row.flatten()
