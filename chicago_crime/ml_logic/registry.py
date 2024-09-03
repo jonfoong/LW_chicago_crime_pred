@@ -10,7 +10,8 @@ from chicago_crime.params import *
 def save_model(model,
                test_metric,
                base_metric,
-               sequence_length):
+               sequence_length,
+               train_time):
     # Set the tracking URI to Databricks
     mlflow.set_tracking_uri(DATABRICKS_EXP_URI)
     mlflow.set_experiment(DATABRICKS_EXP_PATH)
@@ -39,6 +40,7 @@ def save_model(model,
         mlflow.log_params({"sequence_length": sequence_length})
         mlflow.log_metric("test mae", test_metric)
         mlflow.log_metric("base mae", base_metric)
+        mlflow.log_metric("train time", train_time)
         mlflow.tensorflow.log_model(model, "tensorflow_model")
         mlflow.set_tag("stage", stage)
         mlflow.end_run()
@@ -63,6 +65,10 @@ def load_model():
     #     # Load the model from the temporary file
     #     with open(temp_file.name, 'rb') as file:
     #         model = pickle.load(file)
+    mlflow.set_tracking_uri(DATABRICKS_EXP_URI)
+    mlflow.set_experiment(DATABRICKS_EXP_PATH)
+
+    client = MlflowClient()
 
     mlflow_runs = client.search_runs(
         experiment_ids=[DATABRICKS_EXP_ID],

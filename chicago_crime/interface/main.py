@@ -5,6 +5,7 @@ from chicago_crime.ml_logic.load import upload_dt_to_bigquery
 from chicago_crime.ml_logic.model import initialize_model, train_model, compile_model, data_split, get_metrics
 from chicago_crime.ml_logic.registry import save_model, load_model
 import pandas as pd
+import time
 
 
 def preprocess_data() -> None:
@@ -30,8 +31,7 @@ def train():
 
     # get a smaller dataset first, expand later
 
-    df = df[pd.to_datetime(df.Date_day).dt.year==2024]
-    sequence_length = 7
+    sequence_length = 365
     n_communities = len(set(df.community_area))
 
     X_test_scaled, X_test, y_test, X_train, y_train, X_val, y_val = data_split(df, sequence_length, 0.9, 0.2)
@@ -43,14 +43,17 @@ def train():
 
     # fit and train model
 
+    start_time = time.time()
     history, model = train_model(model, X_train, y_train, X_val,
-                                 y_val, epochs = 5, batch_size = 16)
+                                 y_val, epochs = 10, batch_size = 16)
+    train_time = time.time() - start_time
 
     test_mae, base_mae = get_metrics(model, X_test_scaled, X_test, y_test)
 
     # save model to mlflow
 
-    save_model(model, test_mae, base_mae, sequence_length)
+    save_model(model, test_mae, base_mae, sequence_length, train_time)
+
     print("Model trained and saved to mlflow")
 
 # TODO: predict on new data
