@@ -2,17 +2,13 @@ from chicago_crime.params import *
 from chicago_crime.ml_logic.extract import load_raw_data, load_postproc_data
 from chicago_crime.ml_logic.transform import add_missing_communities, clean_data_frame
 from chicago_crime.ml_logic.load import upload_dt_to_bigquery
-from chicago_crime.ml_logic.model import initialize_model, train_model, compile_model
-from chicago_crime.ml_logic.registry import save_model, load_model
-
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import MinMaxScaler
+from chicago_crime.ml_logic.model import initialize_model, train_model, compile_model, data_split, get_metrics
+from chicago_crime.ml_logic.registry import save_model
+import time
 import pandas as pd
-import numpy as np
-
 
 def preprocess_data() -> None:
-    
+
     # Add missing communities to the data and upload to gbq
     add_missing_communities()
 
@@ -30,58 +26,42 @@ def train():
 
     df = load_postproc_data()
 
+    # get max training date
+
+    max_date = pd.to_datetime(df.Date_day).max().strftime('%Y-%m-%d')
+
     # split train val
 
     # get a smaller dataset first, expand later
 
-    df_small = df[pd.to_datetime(df.Date_day).dt.year==2024].query("community_area=='25'")
+    n_communities = len(set(df.community_area))
 
-    # specify sequence length and split data into train and val
-    sequence_length = 7
-    crime_count_list = list(df_small["crime_count"])
-    X, y = [], []
-    for i in range(sequence_length, len(crime_count_list)):
-        X.append(crime_count_list[i-sequence_length:i])
-        y.append(crime_count_list[i])
-
-    X = np.array(X)
-    y = np.array(y)
-
-    X_train, X_val, y_train, y_val = train_test_split(X, y,
-                                                      test_size=0.25, shuffle=False)    
-    # rescale data
-
-    scaler=MinMaxScaler()
-    scaler.fit(X_train)
-
-    X_train_scaled=scaler.transform(X_train)
-    X_val_scaled=scaler.transform(X_val)
+    X_test_scaled, X_test, y_test, X_train, y_train, X_val, y_val = data_split(df, SEQUENCE_LENGTH, 0.9, 0.2)
 
     # initialize model
 
-    model = initialize_model(sequence_length)   
+    model = initialize_model(SEQUENCE_LENGTH, n_communities)
     model = compile_model(model)
 
     # fit and train model
 
-    history, model = train_model(model, X_train_scaled, y_train, X_val_scaled, 
-                y_val, epochs = 10, batch_size = 16)    
+    start_time = time.time()
+    history, model = train_model(model, X_train, y_train, X_val,
+                                 y_val, epochs = 10, batch_size = 16)
+    train_time = time.time() - start_time
 
-    mae = np.min(history.history['val_loss'])
+    test_mae, base_mae = get_metrics(model, X_test_scaled, X_test, y_test)
 
     # save model to mlflow
 
-    save_model(model, mae)
+    save_model(model, test_mae, base_mae, SEQUENCE_LENGTH, train_time, max_date)
+
     print("Model trained and saved to mlflow")
 
 # TODO: predict on new data
 
-def predict():
 
-    model = load_model()
-    return model.predict()
 
 if __name__ == '__main__':
     #preprocess_data()
     train()
-    #predict()

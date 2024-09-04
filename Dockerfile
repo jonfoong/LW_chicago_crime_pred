@@ -4,8 +4,9 @@ COPY chicago_crime chicago_crime
 COPY requirements.txt requirements.txt
 COPY secrets secrets
 COPY setup.py setup.py
+COPY .env .env
 
 RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
 
-CMD uvicorn chicago_crime.api.fast:app --host 0.0.0.0
+CMD uvicorn chicago_crime.api.fast:app --host 0.0.0.0 --port 8080
