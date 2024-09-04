@@ -12,7 +12,12 @@ from chicago_crime.ml_logic.registry import load_model
 
 
 app = FastAPI()
+# cache data
 app.state.model, app.state.sequence_length_model, app.state.train_max_date = load_model()
+# load min and max data
+app.state.df_minmax = load_minmax_train()
+# load training data
+app.state.train_df = load_training_data(app.state.train_max_date, app.state.sequence_length_model)
 
 # Allowing all middleware is optional, but good practice for dev purposes
 app.add_middleware(
@@ -28,11 +33,8 @@ app.add_middleware(
 def predict(date = "2024-08-15"):
 
     # load data the model was trained on
-    df = load_training_data(app.state.train_max_date, app.state.sequence_length_model)
-    df = df.pivot(index='Date_day', columns='community_area', values='crime_count')
 
-    # load min and max data
-    df_minmax = load_minmax_train()
+    df = app.state.train_df.pivot(index='Date_day', columns='community_area', values='crime_count')
 
     # pivot the data from long to wide
 
@@ -52,8 +54,8 @@ def predict(date = "2024-08-15"):
             # create sequences
             X= np.array(crime_count_list[-int(app.state.sequence_length_model):])
             # scaling:
-            mini=df_minmax.iloc[area-1, :].min_crime_count
-            maxi=df_minmax.iloc[area-1, :].max_crime_count
+            mini=app.state.df_minmax.iloc[area-1, :].min_crime_count
+            maxi=app.state.df_minmax.iloc[area-1, :].max_crime_count
             X = (X - mini) / (maxi - mini)
             # append to list
             X_list.append(X)
